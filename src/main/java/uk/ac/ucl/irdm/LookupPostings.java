@@ -1,8 +1,11 @@
 package uk.ac.ucl.irdm;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -25,29 +28,32 @@ public class LookupPostings {
 
   public static void main(String[] args) throws IOException {
 	  
-	if (args.length != 1) {
-			System.out.println("usage: [input-path]");
+	if (args.length != 2) {
+			System.out.println("usage: [input-path] [dataset-path]");
 		System.exit(-1);
 	}
 	
 	System.out.println("input path: " + args[0]);
+	System.out.println("dataset path: " + args[1]);
 	
 	String indexPath = args[0];
+	String datasetPath = args[1];
 
     Configuration config = new Configuration();
     FileSystem fs = FileSystem.get(config);
     MapFile.Reader reader = new MapFile.Reader(new Path(indexPath + "/part-r-00000"), config);
 
-    searchTerm("king", reader, fs);
-    searchTerm("macbeth", reader, fs);
-    searchTerm("juliet", reader, fs);
-    searchTerm("martino", reader, fs);
+    searchTerm("king", reader, fs, datasetPath);
+    searchTerm("macbeth", reader, fs, datasetPath);
+    searchTerm("juliet", reader, fs, datasetPath);
+    searchTerm("martino", reader, fs, datasetPath);
 
     reader.close();
   }
 
-  public static void searchTerm(String term, MapFile.Reader reader, FileSystem fs) throws IOException {
+  public static void searchTerm(String term, MapFile.Reader reader, FileSystem fs, String datasetPath) throws IOException {
 
+	FSDataInputStream dataset = fs.open(new Path(datasetPath));
     Text key = new Text(term);
     PairOfWritables<IntWritable, ArrayListWritable<PairOfInts>> value = 
     		new PairOfWritables<IntWritable, ArrayListWritable<PairOfInts>>();
@@ -59,11 +65,21 @@ public class LookupPostings {
     }
 
     ArrayListWritable<PairOfInts> postingList = value.getRightElement();
-    System.out.println(String.format("Postings list for \"%s\" with df = %d :", term, value.getLeftElement().get()));
+    int df = value.getLeftElement().get();
+    System.out.println(String.format("Postings list for \"%s\" with df = %d :", term, df));
 
     Int2IntFrequencyDistribution histogram = new Int2IntFrequencyDistributionEntry();
     for (PairOfInts pair : postingList) {
       histogram.increment(pair.getRightElement());
+      dataset.seek(pair.getLeftElement());
+      BufferedReader bReader = new BufferedReader(new InputStreamReader(dataset));
+      
+      String line = bReader.readLine();
+      
+      if(df == 1) {
+    	  System.out.println( "DocNo(byte offset) of term: " + pair );
+    	  System.out.println( "line: " + line.substring(0, line.length()>100?100:line.length()) );
+      }
     }
 
     System.out.println(String.format("Histogram for \"%s\"", term));
