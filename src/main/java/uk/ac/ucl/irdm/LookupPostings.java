@@ -51,6 +51,14 @@ public class LookupPostings {
     reader.close();
   }
 
+  /**
+   * search a term frequencies using the inverted index.
+   * @param term
+   * @param reader
+   * @param fs
+   * @param datasetPath
+   * @throws IOException
+   */
   public static void searchTerm(String term, MapFile.Reader reader, FileSystem fs, String datasetPath) throws IOException {
 
 	FSDataInputStream dataset = fs.open(new Path(datasetPath));
