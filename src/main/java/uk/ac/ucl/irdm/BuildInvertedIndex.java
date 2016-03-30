@@ -52,10 +52,11 @@ public class BuildInvertedIndex extends Configured implements Tool {
 		  String[] terms = text.split("\\s+");
 		
 		  for (String term : terms) {
-		    if (term != null && term.length() > 0) wordFreq.increment(term);
+		    if (term != null && term.length() > 0) wordFreq.increment(term); //counts term frequency in doc
 		  }
 		
 		  for (PairOfObjectInt<String> e : wordFreq) {
+			//write the frequency of a term in a given document
 		    context.write(new Text(e.getLeftElement()), new PairOfInts((int) docno.get(), e.getRightElement()));
 		  }
 		}
